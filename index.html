@@ -124,27 +124,6 @@
 </section>
 
 
-<!-- Motivation -->
-<section class="section" id="Motivation">
-  <div class="container is-max-desktop">
-    <h2 class="title">Motivation</h2>
-    <div class="content is-medium">
-      Masked discrete diffusion models have recently challenged the long-dominant next-token prediction autoregressive (AR) models in language modeling. Although 
-      masked diffusion models still slightly lag behind AR models regarding the quality of language distribution estimation, i.e., test perplexity, they hold 
-      several key advantages over AR models. First, masked diffusion models can flexibly change the number of model forward passes during sampling. One can either 
-      reduce the number of sampling steps for faster generation or increase this number to trade extra compute for better quality, i.e., conduct inference-time 
-      compute scaling. Second, when combined with diffusion guidance techniques, masked diffusion models are more adaptable to conditional generation. However, 
-      one major drawback of previous masked diffusion models, which we refer to as the <strong>failure-to-remask</strong> property, has hindered the potentials mentioned above. To 
-      be more specific, in previous masked diffusion models, once a token is unmasked in the sampling process, it can never be masked or changed again. This 
-      property decides that no matter how many time steps are set for the sampling process, only the number of sequence length token predictions can be made, 
-      drastically restricting masked diffusion models' inference-time scaling capacity. Besides, this property also harms the model's controllability, since it 
-      cannot change the tokens generated at the early sampling phase even though they may have obstacled the desired holistic feature. In order to tackle this 
-      drawback, we propose <strong>ReMDM</strong>, a simple and general framework to design remasking samplers for masked diffusion models.
-    </div>
-  </div>
-</section>
-<!-- End Motivation-->
-
 <!-- Graphical Abstract -->
 <section class="section" id="Graphical Abstract"></section>
 <div class="container is-max-desktop">
@@ -162,6 +141,22 @@
   <br>
 </div>
 
+<!-- Motivation -->
+<section class="section" id="Motivation">
+  <div class="container is-max-desktop">
+    <h2 class="title">Motivation</h2>
+    <div class="content is-medium">
+      Diffusion models' iterative refinement techniques have led to state-of-the-art (SoTA) generative modeling and open axes for improved generation via inference-time compute scaling.
+      Additionally, their widely used guidance techniques render these models especially well-suited for controlled generation tasks.
+      However, although discrete diffusion models have steadily been improving in language modeling and are approaching the performance of the dominant autoregressive (AR) approach, current SoTA discrete diffusion models rely on masking processes which limit the flexibility described above.
+      In particular, in these models, once a token is unmasked/generated it can no longer change during, even if it produces an error, which we refer to as the <strong>failure-to-remask</strong> property.
+      This property implies that the most capable discrete diffusion models can only make a number of refinement steps that is upper bounded by the sequence length. 
+      Additionally, this 'locking-in' of tokens harms model controllability.
+      In order to tackle this drawback, we propose <strong>ReMDM</strong>, a simple and general framework to design remasking samplers for masked diffusion models.
+    </div>
+  </div>
+</section>
+<!-- End Motivation-->
 
 
 <!-- Paper abstract -->
@@ -188,61 +183,74 @@
 <!-- Background -->
 <section class="section" id="Motivation">
   <div class="container is-max-desktop">
-    <h2 class="title">A Brief overview of masked diffusion models</h2>
+    <h2 class="title">A brief overview of masked diffusion models</h2>
     <div class="content is-medium">
-      Given a clean one-hot representation of a data token \(\mathbf{x} \in \mathbb{R}^{|V|} \) where \(|V|\) denotes the vocabulary size, masked diffusion models
-      design a forward Markov chain process \(q\) to gradually add noise to \(\mathbf{x}\) and learn a parameterized model \(p_\theta\) to fit the corresponding
-      reverse process. Specifically, the forward process \(q\) is handcrafted and the marginal of each latent variable \(\mathbf{z}_t\) takes the following 
-      form.
+      Given a clean one-hot representation of a data token \(\mathbf{x} \in \mathbb{R}^{|V|} \), where \(|V|\) denotes the vocabulary size, masked diffusion models
+      design a forward Markov chain process \(q\) to gradually add noise to \(\mathbf{x}\) towards some limiting distribution \(\mathbf{m}\), which corresponds to a one-hot represesntation of a special \([MASK]\) token.
+      Specifically, the forward process \(q\) is handcrafted and the marginal of each latent variable \(\mathbf{z}_t\) for \(t \in [0, 1]\), takes the following form.
       $$
-      q(\mathbf{z}_t|\mathbf{x}) = \mathrm{Cat}(\mathbf{z}_t;\alpha_t\mathbf{x} + (1 - \alpha_t)\boldsymbol{\pi}) 
+      q(\mathbf{z}_t|\mathbf{x}) = \mathrm{Cat}(\mathbf{z}_t;\alpha_t\mathbf{x} + (1 - \alpha_t)\mathbf{m}), 
       $$
-      \(\mathrm{Cat}\) denotes the categorical distribution. We follow the normalized time representation as in denoising diffusion models, i.e., \(t \in [0, 1]\),
-      and \(\alpha_t\) is a monotonically decreasing scalar variable with \(\alpha_0 \approx 1\) and \(\alpha_1 \approx 0\). \( \boldsymbol{\pi} \) is the one-hot representation
-      of a special \([MASK]\) token (represented as \(\mathbf{m}\)). Intuitionally, for each clean token \(\mathbf{x}\), the forward process picks a time \(t\) and mask it, and the probability of 
-      \(\mathbf{x}\) remaining unmasked at time \(t\) is \(\alpha_t\). By Bayes' rule, the ground-truth posterior takes the following form.
+      where \(\mathrm{Cat}\) denotes the categorical distribution and \(\alpha_t\) is a monotonically decreasing scalar variable with \(\alpha_0 \approx 1\) and \(\alpha_1 \approx 0\).
+      <!-- Intuitively, this process corresponds to each clean token \(\mathbf{x}\) 'picking a time' \(t\) and mask it, and the probability of \(\mathbf{x}\) remaining unmasked at time \(t\) is \(\alpha_t\). -->
+      Letting \(s\) denote the time step directly preceding \(t\), by Bayes' rule, the ground-truth posterior takes the following form:
       $$
       q(\mathbf{z}_s|\mathbf{z}_t, \mathbf{x}) = \mathrm{Cat}(\mathbf{z}_s; \frac{\alpha_s - \alpha_t}{1 - \alpha_t}\mathbf{x} + \frac{1 - \alpha_s}{1 - \alpha_t}\mathbf{z}_t)
       $$
-      \(s\) denotes the time step that directly precedes \(t\). To model this, we use a neural network \(\mathbf{x}_\theta(\mathbf{z}_t)\) to recover \(\mathbf{x}\)
-      and set the parameterized posterior as \(p_\theta(\mathbf{z}_s|\mathbf{z}_t) = q(\mathbf{z}_s|\mathbf{z}_t, \mathbf{x}_\theta(\mathbf{z}_t))\). To train the model, we use the 
-      technique of variational inference as in continuous diffusion models. To simplify the training objective, two constraints on \(\textbf{x}_\theta\) are applied.
-      Particularly, when \(\mathbf{z}_t = \mathbf{m}\), \(\textbf{x}_\theta(\textbf{z}_t)^\top\textbf{m} = 0\) and when \(\mathbf{z}_t \neq \textbf{m}\), \(\textbf{x}_\theta(\textbf{z}_t) = \textbf{z}_t\).
-      With the help of the two proposed constraints, the training objective takes the following form.
+      
+      The goal of diffusion modeling is to learn a parameterized model \(p_\theta\) to fit the corresponding reverse process.
+      We parameterize this model with a neural network \(\mathbf{x}_\theta(\mathbf{z}_t)\) that aims to recover \(\mathbf{x}\) given some noised latent at timestep \(t\), and we set the parameterized posterior as \(p_\theta(\mathbf{z}_s|\mathbf{z}_t) = q(\mathbf{z}_s|\mathbf{z}_t, \mathbf{x}_\theta(\mathbf{z}_t))\).
+      To train the model, we use the technique of variational inference as in continuous diffusion models and minimize the following objective:
+      <!-- To simplify the training objective, two constraints on \(\textbf{x}_\theta\) are applied. -->
+      <!-- Particularly, when \(\mathbf{z}_t = \mathbf{m}\), \(\textbf{x}_\theta(\textbf{z}_t)^\top\textbf{m} = 0\) and when \(\mathbf{z}_t \neq \textbf{m}\), \(\textbf{x}_\theta(\textbf{z}_t) = \textbf{z}_t\). -->
+      <!-- With the help of the two proposed constraints, the training objective takes the following form. -->
       $$
-      \mathcal{L} = \mathbb{E}_{t \in \{\frac{1}{T}, \ldots, 1\}, \mathbf{z}_{0:T} \sim q(\mathbf{z}_{0:T}|\mathbf{x})} \bigg[\underbrace{-\log p_\theta(\mathbf{x}|\mathbf{z}_0)}_{\mathcal{L}_{reconstruct}} + \underbrace{T\frac{\alpha_t - \alpha_s}{1-\alpha_t}\log(\mathbf{x}_\theta(\mathbf{z}_t)^\top\mathbf{x}))}_{\mathcal{L}_{diffusion}} + \underbrace{D_{KL}(q(\mathbf{z}_T|\mathbf{x})\Vert p_\theta(\mathbf{z}_T))}_{\mathcal{L}_{prior}}\bigg]
+      \mathcal{L} = \mathbb{E}_{t \in \{\frac{1}{T}, \ldots, 1\}, \mathbf{z}_{0:T} \sim q(\mathbf{z}_{0:T}|\mathbf{x})} \bigg[\underbrace{-\log p_\theta(\mathbf{x}|\mathbf{z}_0)}_{\mathcal{L}_{reconstruct}} + \underbrace{T\frac{\alpha_t - \alpha_s}{1-\alpha_t}\log(\mathbf{x}_\theta(\mathbf{z}_t)^\top\mathbf{x}))}_{\mathcal{L}_{diffusion}} + \underbrace{D_{KL}(q(\mathbf{z}_T|\mathbf{x})\Vert p_\theta(\mathbf{z}_T))}_{\mathcal{L}_{prior}}\bigg],
       $$
-      \(T\) is the predefined number of sampling steps and \(D_{KL}\) denotes the compuation of KL divergence. Following <a href="https://arxiv.org/abs/2406.07524">
-        Sahoo et al. 2024</a>, we refer to this model as MDLM.<br>
-      <br><strong>Failure-to-remask property</strong>: As mentioned above, when \(\mathbf{z}_t \neq \mathbf{m}\), \(\mathbf{x}_\theta(\mathbf{z}_t)=\mathbf{z}_t\). This deduces that 
-      \(p_\theta(\mathbf{z}_s|\mathbf{z}_t) = \mathrm{Cat}(\mathbf{z}_s; \mathbf{z}_t)\). Intuitionally, in the sampling process, once a token is unmasked, it stays unchanged until the end of the generation process.
-      We refer to this as the failure-to-remask property. 
+      where \(T\) is the predefined number of sampling steps and \(D_{KL}\) denotes the compuation of KL divergence.
+      Following <a href="https://arxiv.org/abs/2406.07524"> Sahoo et al. 2024</a>, we refer to this model as MDLM.<br>      
+      <br><strong>Failure-to-remask property</strong>: Following the form for the posterior above, when \(\mathbf{z}_t \neq \mathbf{m}\), the distribution is a discrete delta function concentrated on \(\mathbf{z}_t=\mathbf{x}\).
+      We thus have \(p_\theta(\mathbf{z}_s|\mathbf{z}_t) = \mathrm{Cat}(\mathbf{z}_s; \mathbf{z}_t)\), which implies that in the sampling process, once a token is unmasked, it stays unchanged until the end of the generation process.
+      We refer to this as the failure-to-remask property.
     </div>
   </div>
 </section>
 <!-- End Background-->
 
-
 <!-- Sampler -->
-<section class="section" id="Motivation">
+<section class="section" id="Sampler">
   <div class="container is-max-desktop">
     <h2 class="title">How to design remasking samplers?</h2>
     <div class="content is-medium">
-      In order to allow remasking sampling, we need to change the ground-truth posterior such that \(q(\mathbf{z}_s=\mathbf{m}|\mathbf{z}_t=\mathbf{x}, \mathbf{x}) > 0\). Apart from this, we want the whole
-      system to be stable so that the least amount of modification is introduced. Observing the training objective function, we notice that it only depends on the forward marginal \(q(\mathbf{z}_t|\mathbf{x})\).
-      Therefore, we would like the marginal to be unchanged when we modify the posterior. Given the two conditions discussed, we derive the new posterior as:
+      In order to allow remasking sampling, we need to change the ground-truth posterior such that \(q(\mathbf{z}_s=\mathbf{m}|\mathbf{z}_t=\mathbf{x}, \mathbf{x}) > 0\).
+      Our strategy is to define a discrete diffusion model whose posterior for \(\mathbf{z}_t\neq\mathbf{m}\) has the following form:
+      $$
+      q(\mathbf{z}_s \mid \mathbf{z}_t = \mathbf{x}, \mathbf{x}) = (1-\sigma_t)\mathbf{x} + \sigma_t\mathbf{m}.
+      $$
+      The parameter \(\sigma_t\) gives us the flexibility of remasking a decoded token during generation.
+      Because of this property, we dub our method <strong>ReM</strong>asking <strong>D</strong>iffusion <strong>M</strong>odels (<strong>ReMDM</strong>).
+      <br><br>
+      Examining the variational objective above, we notice that it only depends on the forward marginal \(q(\mathbf{z}_t|\mathbf{x})\).
+      Therefore, we would like an new process to have unchanged marginals.
+      With the formula for \(q(\mathbf{z}_s \mid \mathbf{z}_t = \mathbf{x}, \mathbf{x})\) above and this goal in mind, we craft the new posterior as:
       $$
       q_\sigma(\mathbf{z}_s|\mathbf{z}_t, \mathbf{x}) = \begin{cases} \mathrm{Cat}(\mathbf{z}_s; (1-\sigma_t)\mathbf{x} + \sigma_t\mathbf{m}), \quad \mathbf{z}_t \neq \mathbf{m} \\
       \mathrm{Cat}(\mathbf{z}_s; \frac{\alpha_s - (1-\sigma_t)\alpha_t}{1-\alpha_t}\mathbf{x} + \frac{1-\alpha_s-\alpha_t\sigma_t}{1-\alpha_t}\mathbf{m}), \quad \mathbf{z}_t = \mathbf{m}
-      \end{cases}
+      \end{cases}.
       $$
-      \(\sigma_t\) is a scalar parameter that we can control. Intuitionally, it represents the probability of remasking an already generated token. In order to make the probability distribution mathematically 
-      valid, the four coefficients should all have the value between 0 and 1. This gives us the following constraint:
+      This posterior shows that as \(\sigma_t\) increases, we move mass away from \(\mathbf{z}_t\).
+      Importantly, this means that when \(\mathbf{z}_t\) is unmasked, \(\sigma_t\) directly controls the probability of remasking.
+      When \(\sigma_t = 0,\) we recover the posterior from MDLM.
+      Thus, ReMDM can be seen as a more general formulation that admits MDLM as a special case.
+      <br><br>
+      In order to make the formula above a valid probability distribution, we derive the following constraint on \(\sigma_t\):
       $$
-      0 \leq \sigma_t \leq min\{1, \frac{1 - \alpha_s}{\alpha_t}\} := \sigma_t^{max}
+      0 \leq \sigma_t \leq min\{1, \frac{1 - \alpha_s}{\alpha_t}\} := \sigma_t^{max}.
       $$
-      Note that this is the only constraint on \(\sigma_t\). This means that for a token at any position in the sequence and at any time step, we can choose its value as we want as long as it falls within
-      the aforementioned interval. This gives us much flexibility in terms of sampler design. Considering the remasking property, we dub our method <strong>ReM</strong>asking <strong>D</strong>iffusion <strong>M</strong>odels (<strong>ReMDM</strong>).
+      Note that this is the only constraint on \(\sigma_t\).
+      This means that for a token at any position in the sequence and at any time step, we can choose its value as we want as long as it falls within
+      this interval, affording  us a large degree of flexibility in terms of sampler design.
+      
     </div>
   </div>
 </section>
@@ -250,24 +258,23 @@
 
 
 <!-- ELBO -->
-<section class="section" id="Motivation">
+<section class="section" id="Reusing">
   <div class="container is-max-desktop">
-    <h2 class="title">Why is it okay to reuse the MDLM checkpoint?</h2>
+    <h2 class="title">Reusing pre-trained diffusion models</h2>
     <div class="content is-medium">
-      Now let's wrap up and summerize how to design a remasking sampler. Suppose that we already have a well-trained neural network \(\mathbf{x}_\theta\), we can first design a suitable remasking
-      schecule \(\sigma_t\) and then plug \(\mathbf{x}_\theta\) into \(q(\mathbf{z}_s|\mathbf{z}_t, \mathbf{x})\) to get our parameterized posterior as \(p_\theta(\mathbf{z}_t|\mathbf{z}_s) = q(\mathbf{z}_s|\mathbf{z}_t, \mathbf{x}_\theta(\mathbf{z}_t))\).
-      After this, we can begin the sampling process by starting with a token sequence filled with \([MASK]\) and then iteratively applying \(p_\theta(\mathbf{z}_s|\mathbf{z}_t)\) to it for \(T\) times to get our generated sample.<br>  
-
-      <br>However, how to get the well-trained \(\mathbf{x}_\theta\) remains unsolved. Ideally, we should only train the model once and reuse the same neural network for samplers with different \(\sigma_t\) schedules.
-      Here, we argue that we can reuse the MDLM checkpoint. To understand why we make this claim, let's revisit the training objective. After we change the original \(q\) into the remasking \(q_\sigma\), 
-      \(\mathcal{L}_{prior}\) and \(\mathcal{L}_{reconstruct}\) should stay the same since the marginal is unchanged. By applying \(q_\sigma\) and the corresponding \(p_\theta\), the diffusion loss becomes
+      With the ReMDM posterior, we revisit the \(\mathcal{L}_{diffusion}\) term from the training objective where we change the original \(q\) into the remasking \(q_\sigma\).
+      When deriving the new variational objective we find that this diffusion loss term becomes (see paper for details):
       $$
       \mathcal{L}_{diffusion}^\sigma = \mathbb{E}_{t \in \{\frac{1}{T}, \ldots, 1\}, \mathbf{z}_t \sim q(\mathbf{z}_t|\mathbf{x})}\bigg[T\frac{(1-\sigma_t)\alpha_t - \alpha_s}{1 - \alpha_t} \log(\mathbf{x}_\theta(\mathbf{z}_t)^\top \mathbf{x}) \bigg]
       $$
-      Here, we make three observations. First, \(\mathcal{L}_{diffusion}^\sigma\) is a reweighted version of \(\mathcal{L}_{diffusion}\). Second, \(\mathcal{L}_{diffusion}^\sigma\) increases monotonically 
-      as \(\sigma_t\) increases. Third, when \(\sigma_t\) reaches it lower bound, i.e., 0, \(\mathcal{L}_{diffusion}^\sigma = \mathcal{L}_{diffusion}\). Combining these observations, we make the following claims.
-      First, ReMDM represents a family of discrete diffusion models with MDLM as its special case. Second, MDLM is the one that yields the tightest evidence lower bound. Therefore, one can presumably reuse 
-      weights from an MDLM model,i.e., using different \(\sigma_t\) at training and inference. Indeed, we find this to be a performant strategy in practice.
+      We first note that \(\mathcal{L}_{diffusion}^\sigma\) is a reweighted version of \(\mathcal{L}_{diffusion}\).
+      Second, we observe that \(\mathcal{L}_{diffusion}^\sigma\) increases monotonically in \(\sigma_t\).
+      Finally, when \(\sigma_t\) reaches it lower bound, i.e., 0, \(\mathcal{L}_{diffusion}^\sigma = \mathcal{L}_{diffusion}\).
+      Combining these observations, we make the following claims:
+      (1) ReMDM represents a family of discrete diffusion models with MDLM as its special case.
+      (2) MDLM is the one that yields the tightest evidence lower bound.
+      (3) Therefore, one can presumably reuse weights from an MDLM model, i.e., using different \(\sigma_t\) at training and inference.
+      Indeed, we find this to be a performant strategy in practice.
     </div>
   </div>
 </section>
@@ -275,11 +282,13 @@
 
 
 <!-- Strategy -->
-<section class="section" id="Motivation">
+<section class="section" id="Design">
   <div class="container is-max-desktop">
     <h2 class="title">Exploring \(\sigma_t\) schedules</h2>
     <div class="content is-medium">
-      ReMDM opens up a broad design space of remasking samplers with few constraints. Here, we explore some of them. We empirically find that for different tasks, different \(\sigma_t\) schedules work the best.<br>
+      ReMDM opens up a broad design space of remasking samplers with few constraints.
+      Here, we explore some of them. We empirically find that for different tasks, different \(\sigma_t\) schedules work best.
+      <br>
       <br><strong>Max-capped Schedule.</strong> We can potentially reduce the maximum probability of remasking to a constant \(\eta_{cap} \in [0, 1]\). Concretely, we let \(\sigma_t = min\{\eta_{cap}, \frac{1-\alpha_s}{\alpha_t}\}\), for all \(t \in [0, 1]\). We denote this schedule as “ReMDM-cap.”<br>
       <br><strong>Rescaled Schedule.</strong> Alternatively, we can temper the chances of remasking by setting \(\sigma_t = \eta_{rescale}\cdot\sigma_{t}^{max}\), with \(\eta_{rescale} \in [0, 1]\) as a hyperparameter that controls this rescaling. We denote this schedule as “ReMDM-rescale.”<br>
       <br><strong>Confidence-Based Schedule.</strong> In conjunction with the two strategies above, we explore a further reweighing of \(\sigma_t\) which is based on the intuition that tokens of which 
@@ -289,8 +298,11 @@
       If \(\mathbf{z}_t^{(\ell)} = \mathbf{m}\), then \( \psi_t^{(l)} := \infty\). Thus, \(\psi_t^{(\ell)}\) serves as a 'confidence score' for unmasked tokens. We then compute \(\sigma_t^{(\ell)} = \eta_{conf}^{\ell} \cdot \sigma_t\), where
       \(\eta_{conf}^{(\ell)} = \frac{\exp(-\psi_t^{(\ell)})}{\sum_{\ell^\prime=1}^L \exp(-\psi_{t}^{(\ell^\prime)})} \). With this schedule, masked tokens are decoded using the approximate posterior from MDLM, and the unmasked tokens
       are remasked negatively proportional to their confidence. We denote this schedule as “ReMDM-conf.”<br>
-      <br> So far, we have been applying remasking for all \(t \in [0, 1]\). However, there may be certain periods in the generation process when remasking is not necessary. For example, in the early phase of sampling when few tokens are unmasked, 
-      remasking them may do little good but slow down the generation. Therefore, we propose two methods for optionally 'turning on/off' ReMDM sampling, which amount to the following modification of the \(\sigma_t\) schedules above:
+      
+      <br> So far, we have been applying remasking for all \(t \in [0, 1]\).
+      However, there may be certain periods in the generation process when remasking is not necessary.
+      For example, in the early phase of sampling when few tokens are unmasked, remasking them may do little good and instead slow down the generation.
+      Therefore, we propose two methods for optionally 'turning on/off' ReMDM sampling, which amount to the following modification of the \(\sigma_t\) schedules above:
       $$
       \tilde{\sigma}_t = \begin{cases} \sigma_t, & \text{if } t \in [t_{on}, t_{off}), \text{with } t_{on} > t_{off} \\
         0, & \text{otherwise}. \end{cases}
@@ -299,8 +311,16 @@
       <br><strong>Loop.</strong> In this strategy, we set both \(t_{on}, t_{off} \in (0, 1] \). Furthermore, in the range when ReMDM is activated, we modify the noise schedule to be constant, such that
       \(\alpha_t = \alpha(t_{on})\). As shown in the figure below, this divides the sampling process into three phases. In the first phase, the model generates tokens without remasking (\(\sigma_t = 0\), i.e., using MDLM). In the
       second phase, we hold \(\alpha\) constant (i.e., \(\alpha_s = \alpha_t\)), and the model can 'correct potential mistakes' by remasking and predicting a fixed proportion of the generated tokens 
-      in a loop. Finally, in the third phase, we let the model predict any remaining unmasked tokens using the MDLM posterior. We denote this strategy as “ReMDM -loop.”<br>
-      <br><img src="static/images/remdm_loop.png" alt="Caduceus" style="width:400px;height:280px; display: block; margin: auto;">
+      in a loop. Finally, in the third phase, we let the model predict any remaining unmasked tokens using the MDLM posterior. We denote this strategy as “ReMDM -loop.”
+      <br><br>
+      <div class="container is-max-desktop">
+        <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
+          <img src="static/images/remdm_loop.png" alt="Caduceus" style="width:400px;height:280px; display: block; margin: auto;">
+          <br>
+            Depiction of ReMDM-loop \(\sigma_t\) schedule.
+        </h4>
+        <br>
+      </div>
     </div>
   </div>
 </section>
@@ -308,25 +328,28 @@
 
 
 <!-- Predictor-Corrector -->
-<section class="section" id="Motivation">
+<section class="section" id="Predictor-Corrector">
   <div class="container is-max-desktop">
     <h2 class="title">ReMDM v.s. predictor-corrector</h2>
     <div class="content is-medium">
-      Despite its simplicity, ReMDM is not the first method to propose remasking samplers for masked diffusion models. Previous works have put forward different kinds of
-      predictor-corrector samplers based on their own discrete diffusion framework. For instance, <a href="https://proceedings.neurips.cc/paper_files/paper/2022/hash/b5b528767aa35f5b1a60fe0aaeca0563-Abstract-Conference.html">
-      Campbell et al., 2022</a> proposed forward-backward (FB) corrector sampler based on its continuous time Markov chain framework and <a href="https://proceedings.neurips.cc/paper_files/paper/2024/hash/f0d629a734b56a642701bba7bc8bb3ed-Abstract-Conference.html">
-      Gat et al., 2024</a> proposed discrete flow mathching (DFM) corrector sampler based on its flow matching probability path framework. Here, we demonstrate ReMDM's generalizability
-      by showing that these existing corrector samplers are either a special case or a reparameterization of ReMDM.<br>
+      Previous works have propose samplers such as
+      the forward-backward (FB) corrector from <a href="https://proceedings.neurips.cc/paper_files/paper/2022/hash/b5b528767aa35f5b1a60fe0aaeca0563-Abstract-Conference.html">
+      Campbell et al., 2022</a> and the discrete flow matching (DFM) corrector from <a href="https://proceedings.neurips.cc/paper_files/paper/2024/hash/f0d629a734b56a642701bba7bc8bb3ed-Abstract-Conference.html">
+      Gat et al., 2024</a>, which in our work we show can be seen as special cases / reformulations of ReMDM:<br>
+      
       <br><strong>FB corrector.</strong> The FB corrector on MDLM is a special case of ReMDM where \(\sigma_t = \frac{\alpha_s - \alpha_t}{\alpha_t}\).
+      
       <br><strong>DFM corrector.</strong> The DFM corrector on MDLM is a reparameterization of ReMDM where \(\alpha_t = \frac{\beta_t(\alpha_s - \alpha_t)}{\alpha_t}\). 
       \(\beta_t \in \mathbb{R}\) denotes the corrector schecule.<br>
-      <br>Interestingly, although mathematically, ReMDM is equivalent to the DFM corrector, ReMDM has empirically outperformed the DFM corrector. We attribute this to 
-      the fact that ReMDM directly controls the probability of remasking and therefore, it's easy for the users to design sophisticated schedules based on their 
-      intuition. In contrast, in the DFM paper, the authors only conducted a guess-and-try style of hyperparameter grid search. To make it clearer, we plot the 
-      probability of remasking of the best configuration of the DFM corrector and ReMDM-loop regarding the evolution of the time step in the following figure.<br>
+      
+      <br>Interestingly, although ReMDM is mathematically equivalent to a reparameterization of the DFM corrector, in the following section we show that ReMDM empirically outperforms the DFM corrector.
+      We attribute this to the fact that ReMDM is designed specifically to have maximum control on the probability of remasking.
+      In contrast, in the DFM paper, the authors conducted a grid search on the corrector hyperparameters and find some setting that works best for their experiments.
+      To illustrate this difference, below we plot the probability of remasking (as a function of time) defined by the best configuration of the DFM corrector from <a href="https://proceedings.neurips.cc/paper_files/paper/2024/hash/f0d629a734b56a642701bba7bc8bb3ed-Abstract-Conference.html">
+        Gat et al., 2024</a> vs. the ReMDM-loop scheduler that we use in our NLP experiments.<br>
       <br><img src="static/images/schedules.png" alt="Caduceus" style="width:400px;height:280px; display: block; margin: auto;"><br>
-      As we can see, the DFM schedule demonstrates a spike in the beginning and sharp decay afterward. In contrast, the ReMDM-loop schedule is designed to provide 
-      non-trivial remasking probability after a good 'candidate' sequence has been generated by standard MDLM generation.
+      As we can see, the DFM schedule demonstrates a spike in the beginning and sharp decay afterward, i.e., high probability of remasking early on in the generation process with little to no remasking in later stages.
+      In contrast, the ReMDM-loop schedule is designed to provide non-trivial remasking probability after a good 'candidate' sequence has been generated by standard MDLM generation.
     </div>
   </div>
 </section>
@@ -334,15 +357,16 @@
 
 
 <!-- Experiments -->
-<section class="section" id="Motivation">
+<section class="section" id="Experiments">
   <div class="container is-max-desktop">
     <h2 class="title">Experimental results</h2>
     <div class="content is-medium">
       <h3 class="subtitle" style="font-size:1.6rem;"><em>Unconditional text generation on OpenWebText</em></h3><br>
-      We test ReMDM's text generation capacity by unconditoinal generation on OpenWebText. The sequence length is set as 1024 and for each experiment, 5,000 samples are
-      generated. We report the MAUVE score as the main metric and GPT-2 Large generative perplexity as a quality metric and average sentence entropy as a diversity metric.
-      In both the cases of inference-time scaling (\(T \geq 1024\)) and faster sampling (\(T < 1024\)), ReMDM gets the best performance. For inference-time scaling results, 
-      we use the max-capped schedule (\(\eta_{cap}\) = 0.02) in conjunction with the loop strategy (\(t_{on}\) = 0.55, \(t_{off}\) = 0.05, and \(\alpha(t_{on})\) = 0.9 held constant in the ReMDM-loop).
+      We test ReMDM's text generation capacity with unconditoinal generation from models trained on OpenWebText.
+      We report the MAUVE score as the main metric and GPT-2 Large generative perplexity as a quality metric and average sentence entropy as a diversity metric.
+      We examine two settings: (1) inference-time scaling (\(T \geq 1024\)) and (2) faster sampling (\(T < 1024\)).
+      In both, ReMDM achieves the best performance.
+      For inference-time scaling results, we use the max-capped schedule (\(\eta_{cap}\) = 0.02) in conjunction with the loop strategy (\(t_{on}\) = 0.55, \(t_{off}\) = 0.05, and \(\alpha(t_{on})\) = 0.9 held constant in the ReMDM-loop).
       For faster sampling, we use the max-capped schedule (\(\eta_{cap}\) = 0.04) on its own.
       <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
         <br>
@@ -354,11 +378,11 @@
         <img src="static/images/OWT_table.png" alt="Caduceus" style="width:900px;height:430px;">
       </h4>
       <h3 class="subtitle" style="font-size:1.6rem;"><em>Unconditional image generation on ImageNet 256\(\times\)256</em></h3><br>
-      We use a pretrained MaskGiT model (<a href="https://openaccess.thecvf.com/content/CVPR2022/html/Chang_MaskGIT_Masked_Generative_Image_Transformer_CVPR_2022_paper.html">Chang et al., 2022</a>) that was trained on ImageNet samples with 256\(\times\)256 pixels. For each experiment, we 
-      use a different sampler (MaskGiT, MDLM, or ReMDM) and generate 50,000 images conditioned on randomly sampled class labels. We measure sample quality using 
-      Fr&eacutechet Inception Distance (FID) and Inception Score (IS). For MaskGiT, we found best results using no temperature, and for MDLM and ReMDM, we use a temperature 
-      of 0.8. For our sampler, we report the ReMDM-rescale strategy with \(\eta_{rescale} = 0.05\). Although for the smallest \(T\) decoding setting MaskGiT 
-      outperforms the other methods, we see that ReMDM has the best scaling, producing the highest quality images of any model at \(T = 64\). 
+      We use a pretrained MaskGiT model (<a href="https://openaccess.thecvf.com/content/CVPR2022/html/Chang_MaskGIT_Masked_Generative_Image_Transformer_CVPR_2022_paper.html">Chang et al., 2022</a>) that was trained on ImageNet samples with 256\(\times\)256 pixels.
+      We measure sample quality using Fr&eacutechet Inception Distance (FID) and Inception Score (IS).
+      For MaskGiT, we found best results using no temperature, and for MDLM and ReMDM, we use a temperature of 0.8.
+      For our sampler, we report the ReMDM-rescale strategy with \(\eta_{rescale} = 0.05\).
+      Although for the smallest \(T\) decoding setting MaskGiT outperforms the other methods, we see that ReMDM has the best scaling, producing the highest quality images of any model at \(T = 64\). 
       <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
         <br>
         ReMDM produces the highest quality images. Values reflect FID / IS for varying \(T\) on discretized ImageNet conditional generation. For each metric and \(T\), 
@@ -366,14 +390,15 @@
         <img src="static/images/Imagenet_table.png" alt="Caduceus" style="width:400px;height:200px;">
       </h4>
       <h3 class="subtitle" style="font-size:1.6rem;"><em>Conditional QM9 molecule generation</em></h3><br>
-      We follow the setup from <a href="https://arxiv.org/abs/2412.10193">Schiff et al. (2024)</a> to explore controlled small molecule generation. We use the discrete
-      classifier-free guidance (D-CFG) and discrete classifier-based guidance (D-CBG) methods defined in <a href="https://arxiv.org/abs/2412.10193">Schiff et al. (2024)</a> 
+      We follow the setup from <a href="https://arxiv.org/abs/2412.10193">Schiff et al. (2024)</a> to explore controlled small molecule generation.
+      We use the discrete classifier-free guidance (D-CFG) and discrete classifier-based guidance (D-CBG) methods defined in <a href="https://arxiv.org/abs/2412.10193">Schiff et al. (2024)</a> 
       to conditionally generate molecules with higher ring counts (greater than 90th percentile in the original dataset) on top of AR, MDLM, ReMDM and UDLM (state-of-the-art uniform noise discrete diffusion models
-      proposed in <a href="https://arxiv.org/abs/2412.10193">Schiff et al. (2024)</a>). For D-CBG on AR, we use the popular FUDGE (<a href="https://arxiv.org/abs/2104.05218">Yang & Klein, 2021</a>) method.
-      In the following figure, we display the trade-off that comes from increasing guidance strength \(\gamma\). We only visualize results for samples that had at 
-      least 50 novel sequences. For both forms of guidance, CFG and CBG, ReMDM outperforms AR and diffusion approaches, pushing the novelty-property maximization 
-      frontier beyond that of the baseline methods. Additionally, ReMDM scales favorably with more inference-time compute, seen by the curves for larger T dominating 
-      those for smaller T. 
+      proposed in <a href="https://arxiv.org/abs/2412.10193">Schiff et al. (2024)</a>).
+      For D-CBG on AR, we use the popular FUDGE (<a href="https://arxiv.org/abs/2104.05218">Yang & Klein, 2021</a>) method.
+      In the following figure, we display the trade-off that comes from increasing guidance strength \(\gamma\).
+      We only visualize results for samples that had at least 50 novel sequences.
+      For both forms of guidance, D-CFG and D-CBG, ReMDM outperforms AR and diffusion approaches, pushing the novelty-property maximization frontier beyond that of the baseline methods.
+      Additionally, ReMDM scales favorably with more inference-time compute, seen by the curves for larger T dominating those for smaller T. 
       <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
         <img src="static/images/qm9.png" alt="Caduceus" style="width:1000px;height:350px;">
         <br>
@@ -386,7 +411,19 @@
 </section>
 <!-- Experiments -->
 
-
+<!-- Conclusion -->
+<section class="section" id="Conclusion">
+  <div class="container is-max-desktop">
+    <h2 class="title">Conclusion</h2>
+    <div class="content is-medium">
+      In this work, we have presented a novel family of absorbing state discrete diffusion samplers.
+      Our method leverages the strong language modeling performance of this class of models by enabling the use of pretrained weights with the added benefit of more flexible sampling strategies that allow for remasking of predicted tokens.
+      We demonstrate empirically that this leads to improved sample quality for both unconditional and conditional generation and leads to better controlled generation.
+      Our approach also unlocks an important inference-time compute scaling axis that is more limited for existing masked diffusion  models.
+    </div>
+  </div>
+</section>
+<!-- Conclusion -->
 
 
 <!--BibTex citation -->
