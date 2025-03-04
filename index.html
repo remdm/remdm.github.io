@@ -171,7 +171,7 @@
       masked diffusion models still slightly lag behind AR models regarding the quality of language distribution estimation, i.e., test perplexity, they hold 
       several key advantages over AR models. First, masked diffusion models can flexibly change the number of model forward passes during sampling. One can either 
       reduce the number of sampling steps for faster generation or increase this number to trade extra compute for better quality, i.e., conduct inference-time 
-      compute scaling. Second, when combined with diffusion guidance techniques, masked diffusion models are more adaptable to conditional generation. However, 
+      compute scaling. Second, when combined with diffusion guidance techniques, masked diffusion models are more adaptable to conditional generation.<br> However, 
       one major drawback of previous masked diffusion models, which we refer to as the <strong>failure-to-remask</strong> property, has hindered the potentials mentioned above. To 
       be more specific, in previous masked diffusion models, once a token is unmasked in the sampling process, it can never be masked or changed again. This 
       property decides that no matter how many time steps are set for the sampling process, only the number of sequence length token predictions can be made, 
