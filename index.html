@@ -405,7 +405,7 @@
         \(^{\dagger}\) indicates nucleus sampling (top-p=0.9). For each \(T\), the best diffusion MAUVE score is <strong>bolded</strong>.
         <img src="static/images/OWT_table.png" alt="Caduceus" style="width:900px;height:430px;">
       </h4>
-      <h3 class="subtitle" style="font-size:1.6rem;"><em>Unconditional image generation on ImageNet 256\(\times\)256</em></h3><br>
+      <h3 class="subtitle" style="font-size:1.6rem;"><em>Class-conditioned image generation on ImageNet 256\(\times\)256</em></h3><br>
       We use a pretrained MaskGiT model (<a href="https://openaccess.thecvf.com/content/CVPR2022/html/Chang_MaskGIT_Masked_Generative_Image_Transformer_CVPR_2022_paper.html">Chang et al., 2022</a>) that was trained on ImageNet samples with 256\(\times\)256 pixels. For each experiment, we 
       use a different sampler (MaskGiT, MDLM, or ReMDM) and generate 50,000 images conditioned on randomly sampled class labels. We measure sample quality using 
       Fr&eacutechet Inception Distance (FID) and Inception Score (IS). For MaskGiT, we found best results using no temperature, and for MDLM and ReMDM, we use a temperature 
