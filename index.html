@@ -408,7 +408,7 @@
       We report the MAUVE score as the main metric due to the generative perplexity (Gen PPL.) hacking phenomenon (see Section 5.1.1 in the paper for more details).
       Note that Gen PPL. and entropy are only reported for completeness and that lower Gen PPL. does not always correlate with better quality.
       We examine two settings: (1) inference-time scaling (\(T \geq L=1024\)) and (2) faster sampling (\(T < L=1024\)).
-      In both, ReMDM achieves the best performance. Notably, ReMDM scales favorably with inference-time compute. In contrast, masked diffusion models scale poorly with \(T\), and
+      In both settings, ReMDM achieves the best performance. Notably, ReMDM scales favorably with inference-time compute. In contrast, masked diffusion models scale poorly with \(T\), and
       corrector sampler methods saturate when \(T\) is large. 
       <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
         <br>
