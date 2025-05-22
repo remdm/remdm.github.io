@@ -403,11 +403,10 @@
     <div class="content is-medium">
       <h3 class="subtitle" style="font-size:1.6rem;"><em>Unconditional text generation on OpenWebText</em></h3><br>
       We test ReMDM's text generation capacity with unconditoinal generation from models trained on OpenWebText.
-      We report the MAUVE score as the main metric and GPT-2 Large generative perplexity as a quality metric and average sentence entropy as a diversity metric.
-      We examine two settings: (1) inference-time scaling (\(T \geq 1024\)) and (2) faster sampling (\(T < 1024\)).
+      We report the MAUVE score as the main metric due to the generative perplexity (Gen PPL.) hacking phenomenon (see Section 5.1.1 for more details).
+      Note that Gen PPL. and entropy are only reported for completeness and that lower Gen PPL. does not always correlate with better quality.
+      We examine two settings: (1) inference-time scaling (\(T \geq L=1024\)) and (2) faster sampling (\(T < L=1024\)).
       In both, ReMDM achieves the best performance.
-      For inference-time scaling results, we use the max-capped schedule (\(\eta_{cap}\) = 0.02) in conjunction with the loop strategy (\(t_{on}\) = 0.55, \(t_{off}\) = 0.05, and \(\alpha(t_{on})\) = 0.9 held constant in the ReMDM-loop).
-      For faster sampling, we use the max-capped schedule (\(\eta_{cap}\) = 0.04) on its own.
       <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
         <br>
         ReMDM improves sample quality in the case of inference-time scaling and faster sampling. ReMDM outperforms state-of-the-art
@@ -420,8 +419,7 @@
       <h3 class="subtitle" style="font-size:1.6rem;"><em>Class-conditioned image generation on ImageNet 256\(\times\)256</em></h3><br>
       We use a pretrained MaskGiT model (<a href="https://openaccess.thecvf.com/content/CVPR2022/html/Chang_MaskGIT_Masked_Generative_Image_Transformer_CVPR_2022_paper.html">Chang et al., 2022</a>) that was trained on ImageNet samples with 256\(\times\)256 pixels. For each experiment, we 
       use a different sampler (MaskGiT, MDLM, or ReMDM) and generate 50,000 images conditioned on randomly sampled class labels. We measure sample quality using 
-      Fr&eacutechet Inception Distance (FID) and Inception Score (IS). For MaskGiT, we found best results using no temperature, and for MDLM and ReMDM, we use a temperature 
-      of 0.8. For our sampler, we report the ReMDM-rescale strategy with \(\eta_{rescale} = 0.05\). Although for the smallest \(T\) decoding setting MaskGiT 
+      Fr&eacutechet Inception Distance (FID) and Inception Score (IS) and report the best setting for each method. Although for the smallest \(T\) decoding setting MaskGiT 
       outperforms the other methods, we see that ReMDM has the best scaling, producing the highest quality images of any model at \(T = 64\). 
       <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
         <br>
