@@ -183,7 +183,7 @@
       several key advantages over AR models. First, masked diffusion models can flexibly change the number of model forward passes during sampling. One can either 
       reduce the number of sampling steps for faster generation or increase this number to trade extra compute for better quality, i.e., conduct inference-time 
       compute scaling. Second, when combined with diffusion guidance techniques, masked diffusion models are more adaptable to conditional generation.<br><br>However, 
-      one major drawback of previous masked diffusion models, which we refer to as the <strong>failure-to-remask</strong> property, has hindered the potentials mentioned above. To 
+      one major drawback of previous masked diffusion models, which we refer to as the <strong>failure to remask</strong> property, has hindered the potentials mentioned above. To 
       be more specific, in previous masked diffusion models, once a token is unmasked in the sampling process, it can never be masked or changed again. This 
       property decides that no matter how many time steps are set for the sampling process, only the number of sequence length token predictions can be made, 
       drastically restricting masked diffusion models' inference-time scaling capacity. Besides, this property also harms the model's controllability, since it 
@@ -258,12 +258,11 @@
       $$
       \mathcal{L} = \mathbb{E}_{t \in \{\frac{1}{T}, \ldots, 1\}, \mathbf{z}_{0:T} \sim q(\mathbf{z}_{0:T}|\mathbf{x})} \bigg[\underbrace{-\log p_\theta(\mathbf{x}|\mathbf{z}_0)}_{\mathcal{L}_{reconstruct}} + \underbrace{T\frac{\alpha_t - \alpha_s}{1-\alpha_t}\log(\mathbf{x}_\theta(\mathbf{z}_t)^\top\mathbf{x}))}_{\mathcal{L}_{diffusion}} + \underbrace{D_{KL}(q(\mathbf{z}_T|\mathbf{x})\Vert p_\theta(\mathbf{z}_T))}_{\mathcal{L}_{prior}}\bigg],
       $$
-      where \(T\) is the predefined number of sampling steps and \(D_{KL}\) denotes the compuation of KL divergence. In the paper, we only present the 
-      first two terms. This is because the probability distribution at time \(T\) is a delta distribution around the \([MASK]\) token, rendering  
-      \(\mathcal{L}_{prior}\) as 0 and thus was omitted. Following <a href="https://arxiv.org/abs/2406.07524"> Sahoo et al. 2024</a>, we refer to this model as MDLM.<br>      
+      where \(T\) is the predefined number of sampling steps and \(D_{KL}\) denotes the compuation of KL divergence. Of note, the probability distribution at time \(T\) is a delta distribution around the \([MASK]\) token, rendering  
+      \(\mathcal{L}_{prior}\) as 0 and thus could be omitted. Following <a href="https://arxiv.org/abs/2406.07524"> Sahoo et al. 2024</a>, we refer to this model as MDLM.<br>      
       <br><strong>Failure to remask property</strong>: Following the form for the posterior above, when \(\mathbf{z}_t \neq \mathbf{m}\), the distribution is a discrete delta function concentrated on \(\mathbf{z}_t=\mathbf{x}\).
       We thus have \(p_\theta(\mathbf{z}_s|\mathbf{z}_t) = \mathrm{Cat}(\mathbf{z}_s; \mathbf{z}_t)\), which implies that in the sampling process, once a token is unmasked, it stays unchanged until the end of the generation process.
-      We refer to this as the failure-to-remask property.
+      We refer to this as the failure to remask property.
     </div>
   </div>
 </section>
