@@ -452,7 +452,8 @@
       from the failure to remask property. Therefore, we test the effect of remasking sampling on dLLLMs on Countdown
       (bidirectional reasoning) and TruthfulQA (factual knowledge grasp). In both of the settings, we use few-shot evaluation 
       (4-shot for Countdown, and 6-shot for TruthfulQA). In Countdown, pass@1 is reported and in TruthfulQA, the ROUGE score 
-      differences between the model and correct answers and model and plausibly wrong answers provided by the dataset are reported. 
+      differences between the model and correct answers and model and plausibly wrong answers provided by the dataset are reported. For both of the metrics, 
+      we report their mean values and 95% confidence intervals of 20 experiment runs with different random seeds.
       As shown in the following table, LLaDA with ReMDM consistently performs the best and exceeds the original LLaDA with statistical significance. 
       <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
         <br>
