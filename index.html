@@ -353,13 +353,16 @@
       <strong>Switch.</strong> We choose some \(t_{switch} \in (0, 1]\) and we have \( [t_{on}, t_{off}) = [t_{switch}, 0) \). We denote this strategy as “ReMDM-switch.”<br>
       <br><strong>Loop.</strong> In this strategy, we set both \(t_{on}, t_{off} \in (0, 1] \). Furthermore, in the range when ReMDM is activated, we modify the noise schedule to be constant, such that
       \(\alpha_t = \alpha(t_{on})\). As shown in the figure below, this divides the sampling process into three phases. In the first phase, the model generates tokens without remasking (\(\sigma_t = 0\), i.e., using MDLM). In the
-      second phase, we hold \(\alpha\) constant (i.e., \(\alpha_s = \alpha_t\)), and the model can 'correct potential mistakes' by remasking and predicting a fixed proportion of the generated tokens 
-      in a loop. Finally, in the third phase, we let the model predict any remaining unmasked tokens using the MDLM posterior. We denote this strategy as “ReMDM -loop.”<br>
+      second phase, we hold \(\alpha\) constant (i.e., \(\alpha_s = \alpha_t\)), and the model is asked to remask and predict a proportion of the generated tokens in a loop. In particular, 
+      one can use any ReMDM strategy introduced above in this phase. Intuitively, if a 'bad' token is remasked, it will likely be replaced with a 'good' token due to the abundant context.
+      Even if a 'good' token happens to be remasked, since the signal-to-noise ratio is designed to be high in this portion of the generation process, it will likely be re-decoded as other (if not the same)
+      'good' tokens. In this way, ReMDM-loop corrects the 'bad' tokens and maintains the 'good' tokens, i.e., fixes mistakes. Finally, in the third phase, we let the 
+      model predict any remaining unmasked tokens using the MDLM posterior. We denote this strategy as “ReMDM -loop.”<br>
       <br><div class="container is-max-desktop"></div>
         <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
           <img src="static/images/remdm_loop.png" alt="Caduceus" style="width:400px;height:280px; display: block; margin: auto;">
           <br>
-            Depiction of ReMDM-loop \(\sigma_t\) schedule.
+            Depiction of ReMDM-loop \(\alpha_t\) and \(\sigma_t\) schedules.
         </h4>
         <br>
       </div>
