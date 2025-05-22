@@ -445,6 +445,19 @@
         with varying inference compute \(T\) and guidance strength \(\gamma\). (Left) Discrete classifier-free guidance (D-CFG). 
         (Right) Discrete classifier-based guidance (D-CBG) and FUDGE for AR.
       </h4>
+      <h3 class="subtitle" style="font-size:1.6rem;"><em>Downstream task performance</em></h3><br>
+      Recent diffusion large language models (dLLMs) such as LLaDA 8B <a href="https://arxiv.org/abs/2502.09992">Nie et al. (2024)</a>
+      and Dream 7B <a href="https://hkunlp.github.io/blog/2025/dream/">Nie et al. (2024)</a> have demonstrated on par downstream 
+      task performance with autoregressive language models of the same parameter scale. However, these dLLMs still suffer 
+      from the failure to remask property. Therefore, we test the effect of remasking sampling on dLLLMs on Countdown
+      (bidirectional reasoning) and TruthfulQA (factual knowledge grasp). LLaDA with ReMDM consistently performs the best 
+      and exceeds the original LLaDA with statistical significance. 
+      <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
+        <br>
+        LLaDA with ReMDM performs the best on downstream tasks, and consistently exceeds the original LLaDA with statistical
+        significance. For each metric, the best value is <strong>bolded</strong>.
+        <img src="static/images/llada_table.png" alt="Caduceus" style="width:900px;height:430px;">
+      </h4>
     </div>
   </div>
 </section>
