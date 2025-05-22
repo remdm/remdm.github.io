@@ -450,8 +450,10 @@
       and Dream 7B <a href="https://hkunlp.github.io/blog/2025/dream/">Nie et al. (2024)</a> have demonstrated on par downstream 
       task performance with autoregressive language models of the same parameter scale. However, these dLLMs still suffer 
       from the failure to remask property. Therefore, we test the effect of remasking sampling on dLLLMs on Countdown
-      (bidirectional reasoning) and TruthfulQA (factual knowledge grasp). LLaDA with ReMDM consistently performs the best 
-      and exceeds the original LLaDA with statistical significance. 
+      (bidirectional reasoning) and TruthfulQA (factual knowledge grasp). In both of the settings, we use few-shot evaluation 
+      (4-shot for Countdown, and 6-shot for TruthfulQA). In Countdown, pass@1 is reported and in TruthfulQA, the ROUGE score 
+      differences between the model and correct answers and model and plausibly wrong answers provided by the dataset are reported. 
+      As shown in the following table, LLaDA with ReMDM consistently performs the best and exceeds the original LLaDA with statistical significance. 
       <h4 class="subtitle has-text-centered" style="font-size:1.1rem;font-weight: normal;">
         <br>
         LLaDA with ReMDM performs the best on downstream tasks, and consistently exceeds the original LLaDA with statistical
